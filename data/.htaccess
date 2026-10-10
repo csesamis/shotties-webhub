@@ -1,0 +1,44 @@
+<?php
+// Shared helpers for reading the user data file. Used by registration, login and profile pages.
+
+const USER_DIR  = __DIR__ . '/data/User';
+const USER_FILE = USER_DIR . '/user.txt';
+
+/**
+ * Turn one stored line into an array, e.g.
+ * "First Name:John|LastName:Doe|..." => ['First Name' => 'John', 'LastName' => 'Doe', ...]
+ */
+function parse_user_line(string $line): array
+{
+    $record = [];
+    foreach (explode('|', $line) as $part) {
+        $pos = strpos($part, ':');
+        if ($pos !== false) {
+            $record[substr($part, 0, $pos)] = substr($part, $pos + 1);
+        }
+    }
+    return $record;
+}
+
+/** Read every user record from the data file (empty array if the file does not exist yet). */
+function read_users(): array
+{
+    if (!is_file(USER_FILE)) {
+        return [];
+    }
+    $users = [];
+    $handle = fopen(USER_FILE, 'r');
+    if ($handle === false) {
+        return [];
+    }
+    flock($handle, LOCK_SH);
+    while (($line = fgets($handle)) !== false) {
+        $line = trim($line);
+        if ($line !== '') {
+            $users[] = parse_user_line($line);
+        }
+    }
+    flock($handle, LOCK_UN);
+    fclose($handle);
+    return $users;
+}
